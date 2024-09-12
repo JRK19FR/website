@@ -1,26 +1,31 @@
 <?php
 header('Content-Type: application/json');
-require_once 'db_config.php'; // Inclure les informations de connexion à la base de données
 
-$action = $_GET['action'] ?? '';
+// Connexion à la base de données
+$host = 'mysql4.ouiheberg.com';
+$user = 'u8774_NOhMmG1JEe';
+$pass = 'D.@gUMyPi3Jkq+NCVtJULl@E';
+$dbname = 's8774_jrk';
 
-switch ($action) {
-    case 'initialize':
-        initialize();
-        break;
-
-    case 'login':
-        login();
-        break;
-
-    default:
-        echo json_encode(['message' => 'Invalid action']);
-        break;
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    echo json_encode(['message' => 'Database connection failed']);
+    exit;
 }
 
-function initialize() {
-    global $pdo;
+// Fonction pour déchiffrer les données
+function decrypt($data) {
+    $key = '9Q8D166Yq9RW88c24jAmwb3luf4Mdg78';
+    $iv = 'FXkjAXD3R2H5L9cB';
 
+    $data = hex2bin($data);
+    return openssl_decrypt($data, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+}
+
+// Endpoint pour l'initialisation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], '/api/loader/initialize') !== false) {
     try {
         // Compter le nombre d'utilisateurs et de produits
         $stmt = $pdo->query('SELECT COUNT(*) AS totalUsers FROM users');
@@ -44,18 +49,19 @@ function initialize() {
     } catch (Exception $e) {
         echo json_encode(['message' => 'Error initializing']);
     }
+    exit;
 }
 
-function login() {
-    global $pdo;
-
-    $encryptedDiscordID = $_POST['discordID'] ?? '';
-    $encryptedHWID = $_POST['hwid'] ?? '';
-
-    $discordID = decrypt(base64_decode($encryptedDiscordID));
-    $hwid = decrypt(base64_decode($encryptedHWID));
-
+// Endpoint pour le login
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && strpos($_SERVER['REQUEST_URI'], '/api/loader/login') !== false) {
     try {
+        // Lire les données POST
+        $discordIDEncrypted = $_POST['discordID'] ?? '';
+        $hwidEncrypted = $_POST['hwid'] ?? '';
+
+        $discordID = decrypt(base64_decode($discordIDEncrypted));
+        $hwid = decrypt(base64_decode($hwidEncrypted));
+
         // Rechercher l'utilisateur dans la base de données
         $stmt = $pdo->prepare('SELECT * FROM users WHERE discordID = ? AND hwid = ?');
         $stmt->execute([$discordID, $hwid]);
@@ -82,14 +88,8 @@ function login() {
     } catch (Exception $e) {
         echo json_encode(['message' => 'Error during login']);
     }
+    exit;
 }
 
-function decrypt($text) {
-    $key = '9Q8D166Yq9RW88c24jAmwb3luf4Mdg78';
-    $iv = 'FXkjAXD3R2H5L9cB';
-    
-    $cipher = "aes-256-cbc";
-    $decrypted = openssl_decrypt($text, $cipher, $key, OPENSSL_RAW_DATA, $iv);
-    
-    return $decrypted;
-}
+// Si aucune des routes ci-dessus n'est atteinte
+echo json_encode(['message' => 'Invalid endpoint']);
