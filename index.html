@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Interface</title>
+    <script>
+        async function initialize() {
+            try {
+                const response = await fetch('/api.php?action=initialize');
+                const data = await response.json();
+                document.getElementById('initialize-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error initializing:', error);
+            }
+        }
+
+        async function login() {
+            const discordID = document.getElementById('discordID').value;
+            const hwid = document.getElementById('hwid').value;
+
+            try {
+                const response = await fetch('/api.php?action=login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({
+                        discordID: btoa(discordID), // Encodage base64
+                        hwid: btoa(hwid) // Encodage base64
+                    })
+                });
+                const data = await response.json();
+                document.getElementById('login-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error logging in:', error);
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>API Interface</h1>
+
+    <h2>Initialize</h2>
+    <button onclick="initialize()">Initialize</button>
+    <pre id="initialize-result"></pre>
+
+    <h2>Login</h2>
+    <form onsubmit="event.preventDefault(); login();">
+        <label for="discordID">Discord ID:</label>
+        <input type="text" id="discordID" name="discordID" required>
+        <br>
+        <label for="hwid">HWID:</label>
+        <input type="text" id="hwid" name="hwid" required>
+        <br>
+        <button type="submit">Login</button>
+    </form>
+    <pre id="login-result"></pre>
+</body>
+</html>
